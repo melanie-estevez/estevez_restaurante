@@ -99,7 +99,7 @@ class PedidoViewSet(ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            cantidad = int(item['cantidad'])
+            cantidad = int(item.get('cantidad', 0))
 
             if cantidad <= 0:
                 pedido.delete()
