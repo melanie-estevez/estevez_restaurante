@@ -8,16 +8,24 @@ class CustomTokenSerializer(TokenObtainPairSerializer):
     def get_token(cls, user):
         token = super().get_token(user)
         token['username'] = user.username
-        token['email']    = user.email
+        token['email'] = user.email
         token['is_staff'] = user.is_staff
         return token
 
     def validate(self, attrs):
         data = super().validate(attrs)
-        data['user_id']  = self.user.id
+
+        cliente_id = None
+
+        if hasattr(self.user, 'cliente'):
+            cliente_id = self.user.cliente.id
+
+        data['user_id'] = self.user.id
+        data['cliente_id'] = cliente_id
         data['username'] = self.user.username
-        data['email']    = self.user.email
+        data['email'] = self.user.email
         data['is_staff'] = self.user.is_staff
+
         return data
 
 
