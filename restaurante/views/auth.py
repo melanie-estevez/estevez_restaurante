@@ -13,6 +13,7 @@ class RegisterView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -44,6 +45,7 @@ class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+
         refresh_token = request.data.get('refresh')
 
         if not refresh_token:
@@ -54,10 +56,13 @@ class LogoutView(APIView):
 
         try:
             RefreshToken(refresh_token).blacklist()
+
         except TokenError:
             return Response(
                 {'error': 'Token is invalid or expired.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        return Response({'message': 'Session closed successfully.'})
+        return Response(
+            {'message': 'Session closed successfully.'}
+        )
