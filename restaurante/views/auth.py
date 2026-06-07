@@ -6,6 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 
 from restaurante.serializers.user import RegisterSerializer
+from restaurante.models import Cliente
 
 
 class RegisterView(APIView):
@@ -14,14 +15,27 @@ class RegisterView(APIView):
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user    = serializer.save()
+
+        user = serializer.save()
+
+        cliente, created = Cliente.objects.get_or_create(
+            user=user,
+            defaults={
+                'nombre_completo': user.username,
+                'telefono': '0000000000',
+                'correo': user.email,
+            }
+        )
+
         refresh = RefreshToken.for_user(user)
+
         return Response({
-            'access':   str(refresh.access_token),
-            'refresh':  str(refresh),
-            'user_id':  user.id,
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user_id': user.id,
+            'cliente_id': cliente.id,
             'username': user.username,
-            'email':    user.email,
+            'email': user.email,
             'is_staff': user.is_staff,
         }, status=status.HTTP_201_CREATED)
 
@@ -31,11 +45,13 @@ class LogoutView(APIView):
 
     def post(self, request):
         refresh_token = request.data.get('refresh')
+
         if not refresh_token:
             return Response(
                 {'error': 'Refresh token is required.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
         try:
             RefreshToken(refresh_token).blacklist()
         except TokenError:
@@ -43,4 +59,5 @@ class LogoutView(APIView):
                 {'error': 'Token is invalid or expired.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
         return Response({'message': 'Session closed successfully.'})
