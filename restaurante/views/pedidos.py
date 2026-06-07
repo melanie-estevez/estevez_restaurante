@@ -4,6 +4,7 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 
 from decimal import Decimal
 
@@ -15,7 +16,6 @@ from restaurante.models import (
 )
 
 from restaurante.serializers import PedidoSerializer
-from restaurante.permissions import IsStaffOrReadOnly
 from restaurante.filters import PedidoFilter
 
 
@@ -28,7 +28,7 @@ class PedidoViewSet(ModelViewSet):
     serializer_class = PedidoSerializer
 
     permission_classes = [
-        IsStaffOrReadOnly
+        IsAuthenticated
     ]
 
     filter_backends = [
@@ -54,13 +54,23 @@ class PedidoViewSet(ModelViewSet):
         '-fecha_pedido'
     ]
 
-    
     @action(detail=False, methods=['post'], url_path='crear-completo')
     def crear_completo(self, request):
 
         cliente_id = request.data.get('cliente')
         items = request.data.get('items', [])
 
+        if not cliente_id:
+            return Response(
+                {'error': 'Debe enviar el cliente'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not items:
+            return Response(
+                {'error': 'Debe enviar al menos un producto'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         try:
             cliente = Cliente.objects.get(pk=cliente_id)
@@ -78,7 +88,6 @@ class PedidoViewSet(ModelViewSet):
 
         total = Decimal('0.00')
 
-
         for item in items:
 
             try:
@@ -90,7 +99,15 @@ class PedidoViewSet(ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            cantidad = item['cantidad']
+            cantidad = int(item['cantidad'])
+
+            if cantidad <= 0:
+                pedido.delete()
+                return Response(
+                    {'error': 'La cantidad debe ser mayor a 0'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
             subtotal = plato.precio * cantidad
 
             DetallePedido.objects.create(
